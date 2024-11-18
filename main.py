@@ -34,14 +34,14 @@ async def remindme(ctx: commands.Context, time: str, message: str):
         delta_kwargs = {key: int(value) for key, value in match.groupdict().items() if value is not None}
         reminder_time = (datetime.now() + timedelta(**delta_kwargs)).replace(second=0, microsecond=0)
         
-        reminders.append({
+        reminder = {
             'user': ctx.author.id,
             'time': reminder_time,
-            'message': message,
-            'channel': ctx.channel.id
-        })
+            'message': message
+        }
+        reminders.append(reminder)
         
-        await ctx.send(f"Reminder set for {reminder_time.strftime('%Y-%m-%d %H:%M')}.")
+        await ctx.send(f"Reminder set for <t:{int(reminder_time.timestamp())}:f>.")
     else:
         await ctx.send('Invalid time format. Please use formats like 15m, 1h, 1h30m.')
 
@@ -55,16 +55,40 @@ async def at(ctx, time:str, message: str):
             'message': message
         }
         reminders.append(reminder)
-        print(reminder)
-        await ctx.send(f"Reminder set for {reminder_time.strftime('%Y-%m-%d %H:%M')}.")
+        await ctx.send(f"Reminder set for <t:{int(reminder_time.timestamp())}:f>.")
     except:
-        await ctx.send('Invalid time format. Please format the time like XX:MM.', ephemeral=True)
+        await ctx.send('Invalid time format. Please format the time like XX:MM.')
+        
+class ReminderView(discord.ui.View):
+    def __init__(self, reminder):
+        super().__init__(timeout=None)
+        self.reminder = reminder
+        print(f'ReminderView initialized with reminder: {reminder}')
 
+    @discord.ui.button(emoji="⏱️", label="10m", style=discord.ButtonStyle.secondary)
+    async def snooze_10m(self, interaction: discord.Interaction, button: discord.ui.Button):
+        reminder = self.reminder
+        reminder['time'] = datetime.now() + timedelta(minutes=10)
+        await interaction.response.send_message('Reminder snoozed for 10 minutes.')
+
+    @discord.ui.button(emoji="⏱️", label="1h", style=discord.ButtonStyle.secondary)
+    async def snooze_1h(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print('Snooze 1h button clicked')
+        reminder = self.reminder
+        reminder['time'] = datetime.now() + timedelta(hours=1)
+        print(f'Reminder snoozed for 1 hour: {reminder}')
+        await interaction.response.send_message('Reminder snoozed for 1 hour.')
+
+    @discord.ui.button(emoji="🗑️", style=discord.ButtonStyle.danger)
+    async def dismiss(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print('Dismiss button clicked')
+        reminders.remove(self.reminder)
+        print(f'Reminder dismissed: {self.reminder}')
+        await interaction.response.send_message('Reminder dismissed.')
    
 @tasks.loop(seconds=60)
 async def check_reminders():
     now = datetime.now()
-    to_remove = []
     for reminder in reminders:
         if reminder['time'] <= now:
             user = bot.get_user(reminder['user'])
@@ -72,10 +96,11 @@ async def check_reminders():
                 user = await bot.fetch_user(reminder['user'])
             embed = discord.Embed(title="Reminder", description=reminder['message'], color=discord.Color.blue())
             embed.set_footer(text=f"Reminder for {user.name}")
-            await user.send(embed=embed)
-            to_remove.append(reminder)
-    for reminder in to_remove:
-        reminders.remove(reminder)
+            
+            view = ReminderView(reminder)
+            await user.send(embed=embed, view=view)
+
+
         
 @check_reminders.before_loop
 async def before_check_reminders():
@@ -84,8 +109,7 @@ async def before_check_reminders():
     seconds_past = now.second
     await asyncio.sleep(60 - seconds_past)
     print("Task aligned to the start of the next minute")
-    
-
+      
 load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 bot.run(TOKEN)
