@@ -1,6 +1,6 @@
 # Discord Reminder Bot ⏰
 
-A simple, efficient Discord bot designed to help users set reminders in their DMs. This bot is built using `discord.py`.
+A very simple, efficient Discord bot designed to help users set reminders in their DMs. This bot is built using `discord.py`.
 
 ## Motivation
 I decided to build this because I wanted an easy way to get reminders across all my devices. I couldn't use iOS Reminders because I have a Windows PC and I'd prefer the reminders to be on both. Since I have Discord on both devices, I decided to build this Discord bot as it's far more convenient that using a dedicated third party application for reminders. Quickly building my own bot allows me to make it customisable and exactly how I want it.
